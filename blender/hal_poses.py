@@ -27,75 +27,83 @@ BODY_PARTS = {
 }
 
 
-with open("C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/blender/hal_poses.json", "rt") as file:
+with open("C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/output/hal_poses.json", "rt") as file:
     data_dict = json.loads(file.read())
 
 
-def angleZ(vec0, vec1):
+def angleZ(vec0, vec1, bias=0):
     dividend = (vec0[0] * vec1[0] + vec0[1] * vec1[1])
     divisor = np.linalg.norm(vec0[:2]) * np.linalg.norm(vec1[:2])
-    return math.acos(dividend / divisor)
+    return math.acos((dividend + 0.0001) / (divisor + 0.0001)) + bias
 
-def angleY(vec0, vec1):
+def angleY(vec0, vec1, bias=0):
     dividend = (vec0[0] * vec1[0] + vec0[2] * vec1[2])
-    divisor = np.linalg.norm([vec0[0], vec0[2]]) * np.linalg.norm([vec1[0], vec1[2]])
-    return math.acos(dividend / divisor)
+    divisor = np.linalg.norm(np.array([vec0[0], vec0[2]])) * np.linalg.norm(np.array([vec1[0], vec1[2]]))
+    return math.acos((dividend + 0.0001) / (divisor + 0.0001)) + bias
 
 
-def angleX(vec0, vec1):
-    dividend = (vec0[2] * vec1[2] + vec0[1] * vec1[1])
-    divisor = np.linalg.norm(vec0[1:3]) * np.linalg.norm(vec1[1:3])
-    return math.acos(dividend / divisor)
+def angleX(vec0, vec1, bias=0):
+    dividend = (vec0[1] * vec1[1] + vec0[2] * vec1[2])
+    divisor = np.linalg.norm(vec0[1:]) * np.linalg.norm(vec1[1:])
+    return math.acos((dividend + 0.0001) / (divisor + 0.0001)) + bias
 
 
-def angles(vec0, vec1, side):
+def angles(vec0, vec1, bias: np.array, side: chr):
     if side=="r":
-        return Euler((0, 0, angleZ(vec0, vec1)))
+        return Euler((angleX(vec0, vec1), angleY(vec0, vec1), angleZ(vec0, vec1, bias[2])))
     else:
-        return Euler((0, 0, -angleZ(vec0, vec1)))
+        return Euler((angleX(vec0, vec1), angleY(vec0, vec1), -angleZ(vec0, vec1, bias[2])))
 
 
-def create_keyframe(bone, vec0, vec1, side="r"):
-    bone.rotation_euler = angles(vec0, vec1, side)
+def create_keyframe(bone, vec0, vec1, bias=[0,0,0], side="r"):
+    if vec0.any() == None:
+        vec0 = np.array([0,0,1])
+        
+    if vec1.any() == None:
+        vec1 = np.array([0,0,1])
+        
+    bone.rotation_euler = angles(vec0, vec1, bias, side)
     bone.keyframe_insert(data_path="rotation_euler", frame=current_frame)
 
 
-def prepare(bone):
+def prepare(identifier):
+    bpy.data.objects["Standard"].data.bones[identifier].use_inherit_rotation = False
+    bone = bpy.data.objects["Standard"].pose.bones[identifier]
     bone.rotation_mode = "XZY"
     bone.rotation_euler = Euler((0, 0, 0), "XZY")
     return bone
 
 
-bones = bpy.data.objects["Standard"].pose.bones
+
 current_frame = 0
 
 spine_vec = np.array([0, 1, 0])
 
-head = prepare(bones["neck03"])
+head = prepare("neck03")
 
-l_shoulder = prepare(bones["shoulder01.L"])
-l_elbow = prepare(bones["lowerarm01.L"])
-l_wrist = prepare(bones["wrist.L"])
+l_shoulder = prepare("shoulder01.L")
+l_elbow = prepare("lowerarm01.L")
+l_wrist = prepare("wrist.L")
 
-r_shoulder = prepare(bones["shoulder01.R"])
-r_elbow = prepare(bones["lowerarm01.R"])
-r_wrist = prepare(bones["wrist.R"])
+r_shoulder = prepare("shoulder01.R")
+r_elbow = prepare("lowerarm01.R")
+r_wrist = prepare("wrist.R")
 
 for entry in data_dict:
     create_keyframe(head,  np.array(entry["LeftEar"]) - np.array(entry["RightEar"]), np.array([1,0,0]))
     
     l_shoulder_elbow_vec = np.array(entry["LeftElbow"]) - np.array(entry["LeftShoulder"])
-    create_keyframe(l_shoulder, l_shoulder_elbow_vec, spine_vec, "l")
+    create_keyframe(l_shoulder, l_shoulder_elbow_vec, spine_vec, [0, 0, 0], "l")
     l_elbow_wrist_vec = np.array(entry["LeftWrist"]) - np.array(entry["LeftElbow"])
-    create_keyframe(l_elbow, l_elbow_wrist_vec, l_shoulder_elbow_vec, "l")
+    create_keyframe(l_elbow, l_elbow_wrist_vec, l_shoulder_elbow_vec, [0, 0, 0], "l")
     l_wrist_hand_vec = (np.array(entry["LeftIndex"]) + np.array(entry["LeftPinky"])) / 2 - np.array(entry["LeftWrist"]) 
-    create_keyframe(l_elbow, l_wrist_hand_vec, l_elbow_wrist_vec, "l")
+    create_keyframe(l_wrist, l_wrist_hand_vec, l_elbow_wrist_vec, [0, 0, 0], "l")
     
     r_shoulder_elbow_vec = np.array(entry["RightElbow"]) - np.array(entry["RightShoulder"])
-    create_keyframe(r_shoulder, r_shoulder_elbow_vec, spine_vec)
+    create_keyframe(r_shoulder, r_shoulder_elbow_vec, spine_vec,  [0, 0, 0])
     r_elbow_wrist_vec = np.array(entry["RightWrist"]) - np.array(entry["RightElbow"])
-    create_keyframe(r_shoulder, r_elbow_wrist_vec, r_shoulder_elbow_vec)
+    create_keyframe(r_elbow, r_elbow_wrist_vec, r_shoulder_elbow_vec, [0, 0, 0])
     r_wrist_hand_vec = (np.array(entry["RightIndex"]) + np.array(entry["RightPinky"])) / 2 - np.array(entry["RightWrist"])
-    create_keyframe(r_elbow, r_wrist_hand_vec, r_elbow_wrist_vec)
+    create_keyframe(r_wrist, r_wrist_hand_vec, r_elbow_wrist_vec)
 
     current_frame += 2
