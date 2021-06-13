@@ -33,21 +33,32 @@ with open("C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/
 
 def angleZ(vec0, vec1):
     dividend = (vec0[0] * vec1[0] + vec0[1] * vec1[1])
-    divisor = (np.linalg.norm(vec0[:2]) * np.linalg.norm(vec1[:2]))
+    divisor = np.linalg.norm(vec0[:2]) * np.linalg.norm(vec1[:2])
     return math.acos(dividend / divisor)
 
 def angleY(vec0, vec1):
     dividend = (vec0[0] * vec1[0] + vec0[2] * vec1[2])
-    divisor = (np.linalg.norm(vec0[1,2]) * np.linalg.norm(vec1[1,2]))
+    divisor = np.linalg.norm([vec0[0], vec0[2]]) * np.linalg.norm([vec1[0], vec1[2]])
     return math.acos(dividend / divisor)
+
 
 def angleX(vec0, vec1):
     dividend = (vec0[2] * vec1[2] + vec0[1] * vec1[1])
-    divisor = (np.linalg.norm(vec0[1:3]) * np.linalg.norm(vec1[1:3]))
+    divisor = np.linalg.norm(vec0[1:3]) * np.linalg.norm(vec1[1:3])
     return math.acos(dividend / divisor)
 
-def angle(vec0, vec1):
-    return Euler(angleX(vec0, vec1), angleY(vec0, vec1), angleZ(vec0, vec1))
+
+def angles(vec0, vec1, side):
+    if side=="r":
+        return Euler((0, 0, angleZ(vec0, vec1)))
+    else:
+        return Euler((0, 0, -angleZ(vec0, vec1)))
+
+
+def create_keyframe(bone, vec0, vec1, side="r"):
+    bone.rotation_euler = angles(vec0, vec1, side)
+    bone.keyframe_insert(data_path="rotation_euler", frame=current_frame)
+
 
 def prepare(bone):
     bone.rotation_mode = "XZY"
@@ -71,39 +82,20 @@ r_elbow = prepare(bones["lowerarm01.R"])
 r_wrist = prepare(bones["wrist.R"])
 
 for entry in data_dict:
-    head_vec = np.array(entry["LeftEar"]) - np.array(entry["RightEar"])
-    head_angle = angleZ(head_vec, np.array([1,0,0]))
-    head.rotation_euler = Euler((0, 0, head_angle))
-    head.keyframe_insert(data_path="rotation_euler", frame=current_frame)
-
-    l_shoulder_elbow_vec = np.array(entry["LeftElbow"]) - np.array(entry["LeftShoulder"])
-    l_shoulder_angle = angleZ(l_shoulder_elbow_vec, spine_vec) 
-    l_shoulder.rotation_euler = Euler((0, 0, -l_shoulder_angle))
-    l_shoulder.keyframe_insert(data_path="rotation_euler", frame=current_frame)
+    create_keyframe(head,  np.array(entry["LeftEar"]) - np.array(entry["RightEar"]), np.array([1,0,0]))
     
+    l_shoulder_elbow_vec = np.array(entry["LeftElbow"]) - np.array(entry["LeftShoulder"])
+    create_keyframe(l_shoulder, l_shoulder_elbow_vec, spine_vec, "l")
     l_elbow_wrist_vec = np.array(entry["LeftWrist"]) - np.array(entry["LeftElbow"])
-    l_elbow_angle = angleZ(l_elbow_wrist_vec, l_shoulder_elbow_vec) 
-    l_elbow.rotation_euler = Euler((0, 0, -l_elbow_angle))
-    l_elbow.keyframe_insert(data_path="rotation_euler", frame=current_frame)
-
+    create_keyframe(l_elbow, l_elbow_wrist_vec, l_shoulder_elbow_vec, "l")
     l_wrist_hand_vec = (np.array(entry["LeftIndex"]) + np.array(entry["LeftPinky"])) / 2 - np.array(entry["LeftWrist"]) 
-    l_wrist_angle = angleZ(l_wrist_hand_vec, l_elbow_wrist_vec)
-    l_wrist.rotation_euler = Euler((0, 0, l_wrist_angle))
-    l_wrist.keyframe_insert(data_path="rotation_euler", frame=current_frame)  
+    create_keyframe(l_elbow, l_wrist_hand_vec, l_elbow_wrist_vec, "l")
     
     r_shoulder_elbow_vec = np.array(entry["RightElbow"]) - np.array(entry["RightShoulder"])
-    r_shoulder_angle = angleZ(r_shoulder_elbow_vec, spine_vec)
-    r_shoulder.rotation_euler = Euler((0, 0, r_shoulder_angle))
-    r_shoulder.keyframe_insert(data_path="rotation_euler", frame=current_frame)
-    
+    create_keyframe(r_shoulder, r_shoulder_elbow_vec, spine_vec)
     r_elbow_wrist_vec = np.array(entry["RightWrist"]) - np.array(entry["RightElbow"])
-    r_elbow_angle = angleZ(r_elbow_wrist_vec, r_shoulder_elbow_vec)
-    r_elbow.rotation_euler = Euler((0, 0, r_elbow_angle))
-    r_elbow.keyframe_insert(data_path="rotation_euler", frame=current_frame)
-
+    create_keyframe(r_shoulder, r_elbow_wrist_vec, r_shoulder_elbow_vec)
     r_wrist_hand_vec = (np.array(entry["RightIndex"]) + np.array(entry["RightPinky"])) / 2 - np.array(entry["RightWrist"])
-    r_wrist_angle = angleZ(r_wrist_hand_vec, r_elbow_wrist_vec)
-    r_wrist.rotation_euler = Euler((0, 0, r_wrist_angle))
-    r_wrist.keyframe_insert(data_path="rotation_euler", frame=current_frame)
+    create_keyframe(r_elbow, r_wrist_hand_vec, r_elbow_wrist_vec)
 
     current_frame += 2
