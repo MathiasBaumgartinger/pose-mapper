@@ -9,8 +9,10 @@ from mathutils import Quaternion
 from enum import Enum
 import importlib
 
-import angles as a
-importlib.reload(a)
+spec = importlib.util.spec_from_file_location("module.name", "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/blender/angles.py")
+a = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(a)
+
 
 BODY_PARTS = {
     # Head
@@ -37,8 +39,8 @@ class Mode(Enum):
 MODE = Mode.EULER_ANGLE_Z
 NUM_ITERATIONS = 50
 
-#data_path = "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/output/asd.json"
-data_path = "C:/Users/Mathias/Documents/tester/asd.json"
+data_path = "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/output/old/hal_poses.json"
+#data_path = "C:/Users/Mathias/Documents/tester/asd.json"
 with open(data_path, "rt") as file:
     data_dict = json.loads(file.read())
 

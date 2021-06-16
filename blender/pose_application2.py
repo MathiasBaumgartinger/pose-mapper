@@ -10,10 +10,9 @@ class Mode(Enum):
 
 MODE = Mode.OPENPOSE
 NUM_ITERATIONS = 50
+data_path = "pose.json"
 
 prefix = "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/output/" if MODE == Mode.OPENPOSE else "C:/Users/Mathias/Documents/tester/"
-data_path = "flex.json"
-
 with open(prefix+data_path, "rt") as file:
     data_dict = json.loads(file.read())
 
@@ -50,7 +49,7 @@ def gd_to_blender(vec):
 
 
 def op_to_blender(vec):
-    return Vector((vec[0], vec[1], -vec[2]))
+    return Vector((vec[0], vec[2] * 0.5, -vec[1]))
 
 
 def prepare(identifier, bias: np.array = np.array([0,0,0])):
@@ -60,7 +59,6 @@ def prepare(identifier, bias: np.array = np.array([0,0,0])):
     bone = bpy.data.objects["Standard"].pose.bones[identifier]
     landmark = create_or_get_sphere(identifier)
     #landmark.animation_data_clear()
-    print(landmark)
     
     return bone, landmark
 
@@ -73,7 +71,14 @@ def add_point_in_id(id: str):
     return id
 
 
-def do_single_frame():
+def do():
+    if MODE == Mode.OPENPOSE:
+        bpy.data.objects["Standard"].location = Vector((0.38, -0.14, -1.5))
+        bpy.data.objects["Standard"].scale = Vector((0.072, 0.072, 0.072))
+    elif MODE == Mode.GODOT:
+        bpy.data.objects["Standard"].location = Vector((0, 0, 0.15))
+        bpy.data.objects["Standard"].scale = Vector((0.072, 0.072, 0.072))
+    
     for bone_id in data_dict["bones"]:
         if "spine" in bone_id or "neck" in bone_id: continue
         current_bone, landmark = prepare(add_point_in_id(bone_id))
@@ -101,10 +106,5 @@ def do_single_frame():
         current_frame += 1
 
 
-def do_multiple_frames():
-    current_frame = 0
-    
-    i += 1
-    current_frame += 1
 
-do_single_frame()
+do()
