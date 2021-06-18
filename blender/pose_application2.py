@@ -1,6 +1,7 @@
 import bpy
 import json
 import numpy as np
+import math
 from mathutils import Vector
 from enum import Enum
 
@@ -9,7 +10,7 @@ class Mode(Enum):
     OPENPOSE = 1
 
 MODE = Mode.OPENPOSE
-NUM_ITERATIONS = 50
+NUM_ITERATIONS = 10
 data_path = "pose.json"
 
 prefix = "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/output/" if MODE == Mode.OPENPOSE else "C:/Users/Mathias/Documents/tester/"
@@ -17,12 +18,19 @@ with open(prefix+data_path, "rt") as file:
     data_dict = json.loads(file.read())
 
 
-def create_keyframe(current_frame, bone, vec0, vec1, bias=[0,0,0], side="r"):
-    if vec0.any() == None:
-        return
-        
-    if vec1.any() == None:
-        return
+connections = {	
+    "upperleg01.R": "lowerleg01.R", 
+    "upperleg01.L": "lowerleg01.L",
+    
+    "lowerleg01.R": "foot.R",
+    "upperleg01.L": "foot.L",
+
+	"shoulder01.R": "lowerarm01.R",
+	"shoulder01.L": "lowerarm01.L",
+	
+	"lowerarm01.L":	"wrist.L",
+	"lowerarm01.R": "wrist.R"
+}
 
 
 def get_sphere(name):
@@ -70,41 +78,106 @@ def add_point_in_id(id: str):
         return id[:len(id) - 1] + "." + id[len(id) - 1:]
     return id
 
+landmarks = {}
 
-def do():
+def do_multiple():
     if MODE == Mode.OPENPOSE:
-        bpy.data.objects["Standard"].location = Vector((0.38, -0.14, -1.5))
-        bpy.data.objects["Standard"].scale = Vector((0.072, 0.072, 0.072))
+        bpy.data.objects["Standard"].location = Vector((0.65, 0.04, -0.93))
+        bpy.data.objects["Standard"].rotation_euler = Vector((0, math.radians(-17.9), 0))
+        bpy.data.objects["Standard"].scale = Vector((0.04, 0.04, 0.04))
     elif MODE == Mode.GODOT:
         bpy.data.objects["Standard"].location = Vector((0, 0, 0.15))
         bpy.data.objects["Standard"].scale = Vector((0.072, 0.072, 0.072))
     
+    for landmark in landmarks:
+        landmark.animation_data_clear()
+
     for bone_id in data_dict["bones"]:
         if "spine" in bone_id or "neck" in bone_id: continue
         current_bone, landmark = prepare(add_point_in_id(bone_id))
 
         if current_bone == None: continue
 
-        landmark.scale = Vector((0.05, 0.05, 0.05))
-        bone_constraint = current_bone.constraints.new("DAMPED_TRACK")
-        bone_constraint.target = landmark
+        landmark.scale = Vector((0.02, 0.02, 0.02))
+        landmarks[add_point_in_id(bone_id)] = landmark
+    
+    # Store multiple frames and take average -> smoother
+    keyframe_arrays = {}
+    for bone_id, connection_id in connections.items():
+        bone = bpy.data.objects["Standard"].pose.bones[bone_id]
+        bone_constraint = bone.constraints.new("DAMPED_TRACK")
+        bone_constraint.target = landmarks[connection_id]
+        # Init
+        keyframe_arrays[bone_id] = np.zeros((1, 3))
+
+    current_frame = 0
+    i = 0
+    for entry in data_dict["poses"]:
+        for bone_id, pos in entry.items():
+            bone_id = add_point_in_id(bone_id)
+            if not bone_id in keyframe_arrays: continue
+        
+            keyframe_arrays[bone_id] = np.vstack((keyframe_arrays[bone_id], np.array(pos)))
+
+            if i == NUM_ITERATIONS:
+                keyframe_arrays[bone_id] = keyframe_arrays[bone_id][1:,:]
+                landmark = get_sphere(bone_id)
+                if landmark != None:
+                    if MODE == Mode.GODOT:
+                        landmark.location = gd_to_blender(np.mean(keyframe_arrays[bone_id]),axis=0)                  
+                    elif MODE == Mode.OPENPOSE:
+                        landmark.location = op_to_blender(np.mean(keyframe_arrays[bone_id], axis=0))                  
+                    
+                    landmark.keyframe_insert(data_path="location", frame=current_frame)
+                    keyframe_arrays[bone_id] = np.zeros((1, 3))
+                
+                i = 0
+        
+            i += 1
+            current_frame += 1
+
+
+def do():
+    if MODE == Mode.OPENPOSE:
+        bpy.data.objects["Standard"].location = Vector((0.65, 0.04, -0.93))
+        bpy.data.objects["Standard"].rotation_euler = Vector((0, math.radians(-17.9), 0))
+        bpy.data.objects["Standard"].scale = Vector((0.04, 0.04, 0.04))
+    elif MODE == Mode.GODOT:
+        bpy.data.objects["Standard"].location = Vector((0, 0, 0.15))
+        bpy.data.objects["Standard"].scale = Vector((0.072, 0.072, 0.072))
+
+    for landmark in landmarks:
+        landmark.animation_data_clear()
+
+    for bone_id in data_dict["bones"]:
+        if "spine" in bone_id or "neck" in bone_id: continue
+        current_bone, landmark = prepare(add_point_in_id(bone_id))
+
+        if current_bone == None: continue
+
+        landmark.scale = Vector((0.02, 0.02, 0.02))
+        landmarks[add_point_in_id(bone_id)] = landmark
+
+    for bone_id, connection_id in connections.items():
+        bone = bpy.data.objects["Standard"].pose.bones[bone_id]
+        bone_constraint = bone.constraints.new("DAMPED_TRACK")
+        bone_constraint.target = landmarks[connection_id]
 
     current_frame = 0
     for entry in data_dict["poses"]:
         for bone_id, pos in entry.items():
-            if "spine" in bone_id or "neck" in bone_id: continue
-            
-            landmark = get_sphere(add_point_in_id(bone_id))
+            bone_id = add_point_in_id(bone_id)
+        
+            landmark = get_sphere(bone_id)
             if landmark != None:
                 if MODE == Mode.GODOT:
-                    landmark.location = gd_to_blender(pos)
+                    landmark.location = gd_to_blender(pos)                  
                 elif MODE == Mode.OPENPOSE:
-                    landmark.location = op_to_blender(pos)
+                    landmark.location = op_to_blender(pos)                  
                 
-                landmark.keyframe_insert(data_path="location", frame=current_frame)
-
-        current_frame += 1
-
+                landmark.keyframe_insert(data_path="location", frame=current_frame)                
+        
+            current_frame += 1
 
 
 do()
