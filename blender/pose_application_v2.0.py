@@ -60,7 +60,7 @@ def op_to_blender(vec):
     return Vector((vec[0], vec[2] * 0.5, -vec[1]))
 
 
-def prepare(identifier, bias: np.array = np.array([0,0,0])):
+def prepare_bone(identifier, bias: np.array = np.array([0,0,0])):
     if not identifier in bpy.data.objects["Standard"].pose.bones:
         return None, None
     
@@ -70,17 +70,7 @@ def prepare(identifier, bias: np.array = np.array([0,0,0])):
     
     return bone, landmark
 
-
-# Makehuman creates bones on each side with <id>.<R/L>, 
-# points cannot be stored in json => add if required
-def add_point_in_id(id: str):
-    if id[len(id) - 1] == "R" or id[len(id) - 1] == "L":
-        return id[:len(id) - 1] + "." + id[len(id) - 1:]
-    return id
-
-landmarks = {}
-
-def do_multiple():
+def prepare():
     if MODE == Mode.OPENPOSE:
         bpy.data.objects["Standard"].location = Vector((0.65, 0.04, -0.93))
         bpy.data.objects["Standard"].rotation_euler = Vector((0, math.radians(-17.9), 0))
@@ -88,18 +78,35 @@ def do_multiple():
     elif MODE == Mode.GODOT:
         bpy.data.objects["Standard"].location = Vector((0, 0, 0.15))
         bpy.data.objects["Standard"].scale = Vector((0.072, 0.072, 0.072))
-    
+
     for landmark in landmarks:
         landmark.animation_data_clear()
-
+    
     for bone_id in data_dict["bones"]:
-        if "spine" in bone_id or "neck" in bone_id: continue
-        current_bone, landmark = prepare(add_point_in_id(bone_id))
-
+        if not bone_id in connections and not bone_id in connections.values(): continue
+        current_bone, landmark = prepare_bone(bone_id)
+        
         if current_bone == None: continue
-
+        
         landmark.scale = Vector((0.02, 0.02, 0.02))
-        landmarks[add_point_in_id(bone_id)] = landmark
+        landmarks[bone_id] = landmark
+    
+    for bone_id, connection_id in connections.items():
+        bone = bpy.data.objects["Standard"].pose.bones[bone_id]
+        bone_constraint = bone.constraints.new("DAMPED_TRACK")
+        bone_constraint.target = landmarks[connection_id]
+
+# Makehuman creates bones on each side with <id>.<R/L>, 
+# points cannot be stored in json => add if required
+#def add_point_in_id(id: str):
+#    if id[len(id) - 1] == "R" or id[len(id) - 1] == "L":
+#        return id[:len(id) - 1] + "." + id[len(id) - 1:]
+#    return id
+
+landmarks = {}
+
+def do_multiple():
+    prepare()
     
     # Store multiple frames and take average -> smoother
     keyframe_arrays = {}
@@ -114,7 +121,6 @@ def do_multiple():
     i = 0
     for entry in data_dict["poses"]:
         for bone_id, pos in entry.items():
-            bone_id = add_point_in_id(bone_id)
             if not bone_id in keyframe_arrays: continue
         
             keyframe_arrays[bone_id] = np.vstack((keyframe_arrays[bone_id], np.array(pos)))
@@ -138,36 +144,11 @@ def do_multiple():
 
 
 def do():
-    if MODE == Mode.OPENPOSE:
-        bpy.data.objects["Standard"].location = Vector((0.65, 0.04, -0.93))
-        bpy.data.objects["Standard"].rotation_euler = Vector((0, math.radians(-17.9), 0))
-        bpy.data.objects["Standard"].scale = Vector((0.04, 0.04, 0.04))
-    elif MODE == Mode.GODOT:
-        bpy.data.objects["Standard"].location = Vector((0, 0, 0.15))
-        bpy.data.objects["Standard"].scale = Vector((0.072, 0.072, 0.072))
-
-    for landmark in landmarks:
-        landmark.animation_data_clear()
-
-    for bone_id in data_dict["bones"]:
-        if "spine" in bone_id or "neck" in bone_id: continue
-        current_bone, landmark = prepare(add_point_in_id(bone_id))
-
-        if current_bone == None: continue
-
-        landmark.scale = Vector((0.02, 0.02, 0.02))
-        landmarks[add_point_in_id(bone_id)] = landmark
-
-    for bone_id, connection_id in connections.items():
-        bone = bpy.data.objects["Standard"].pose.bones[bone_id]
-        bone_constraint = bone.constraints.new("DAMPED_TRACK")
-        bone_constraint.target = landmarks[connection_id]
+    prepare()
 
     current_frame = 0
     for entry in data_dict["poses"]:
-        for bone_id, pos in entry.items():
-            bone_id = add_point_in_id(bone_id)
-        
+        for bone_id, pos in entry.items():        
             landmark = get_sphere(bone_id)
             if landmark != None:
                 if MODE == Mode.GODOT:
@@ -177,7 +158,7 @@ def do():
                 
                 landmark.keyframe_insert(data_path="location", frame=current_frame)                
         
-            current_frame += 1
+        current_frame += 1
 
 
 do()
