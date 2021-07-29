@@ -1,3 +1,4 @@
+from typing import Collection
 from bpy.types import AdjustmentSequence, Object
 from mathutils import Vector
 from enum import Enum
@@ -7,7 +8,7 @@ import bpy
 
 class Joint:
     #transform: np.array
-    landmark = None # blender object
+    landmark: Object
     name: str
     bone: Object
     constraint: Object
@@ -34,7 +35,8 @@ class Joint:
 
 
 class Model:
-    model = None # blender object
+    model: Object
+    landmark_parent: Object
     joints = dict() 
     
     class Mode(Enum):
@@ -44,11 +46,18 @@ class Model:
     
     def __init__(self, config: dict, model: Object) -> None:
         self.model = model
+
+        bpy.ops.object.empty_add()
+        self.landmark_parent = bpy.context.object
+        self.landmark_parent.parent = self.model
+
         for bone_id, connection_id in config.items():
             if not bone_id in self.joints:
                 self.joints[bone_id] = Joint(bone_id, self)
+                self.joints[bone_id].landmark.parent = self.landmark_parent
             if not connection_id in self.joints:
                 self.joints[connection_id] = Joint(connection_id, self)
+                self.joints[connection_id].landmark.parent = self.landmark_parent
 
         for joint_id, joint in self.joints.items():
             if joint_id in config:
@@ -75,7 +84,7 @@ class Model:
                 if bone_id in self.joints:
                     landmark = self.joints[bone_id].landmark
                     if MODE == self.Mode.GODOT.value:
-                        landmark.location = self.gd_to_blender(pos) - landmark.location = self.op_to_blender(pos) - self.get_adjustment_vector(
+                        landmark.location = self.gd_to_blender(pos) - self.get_adjustment_vector(
                             np.array(entry["shoulder01.R"]), np.array(entry["shoulder01.L"]),
                             np.array(entry["upperleg01.R"]), np.array(entry["upperleg01.L"]),
                             self.gd_to_blender
