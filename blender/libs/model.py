@@ -49,6 +49,7 @@ class Model:
 
         bpy.ops.object.empty_add()
         self.landmark_parent = bpy.context.object
+        self.landmark_parent.scale = Vector((10, 10, 10))
         self.landmark_parent.parent = self.model
 
         for bone_id, connection_id in config.items():
