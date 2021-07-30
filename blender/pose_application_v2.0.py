@@ -39,5 +39,5 @@ connections = {
 
 data = data_dict["poses"]
 
-model1 = m.Model(connections, bpy.data.objects["Standard"])
+model1 = m.Model(connections, bpy.data.objects["Standard"], bpy.data.armatures["Standard"])
 model1.apply_animation(data, MODE.value)

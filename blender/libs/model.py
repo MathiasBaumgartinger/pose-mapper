@@ -1,5 +1,5 @@
 from typing import Collection
-from bpy.types import AdjustmentSequence, Object
+from bpy.types import AdjustmentSequence, Armature, Object
 from mathutils import Vector
 from enum import Enum
 import numpy as np
@@ -26,7 +26,7 @@ class Joint:
         bpy.ops.surface.primitive_nurbs_surface_sphere_add()
         ob = bpy.context.object
         ob.name = self.name
-        ob.scale = Vector((0.02, 0.02, 0.02))
+        ob.scale = Vector((0.5, 0.5, 0.5))
         return ob
 
     
@@ -44,12 +44,13 @@ class Model:
         OPENPOSE = 1
 
     
-    def __init__(self, config: dict, model: Object) -> None:
+    def __init__(self, config: dict, model: Object, armature: Armature) -> None:
         self.model = model
 
+        bpy.ops.object.mode_set(mode="OBJECT", toggle=False)
         bpy.ops.object.empty_add()
         self.landmark_parent = bpy.context.object
-        self.landmark_parent.scale = Vector((10, 10, 10))
+        self.landmark_parent.location = Vector((0, 0, armature.bones['spine03'].matrix_local.translation.z))
         self.landmark_parent.parent = self.model
 
         for bone_id, connection_id in config.items():
@@ -92,15 +93,13 @@ class Model:
                         )              
                     elif MODE == self.Mode.OPENPOSE.value:
                         # Find location by the position (different system in blender) minus an adjustment
-                        # to the origion
+                        # to the origin
                         landmark.location = self.op_to_blender(pos) - self.get_adjustment_vector(
                             np.array(entry["shoulder01.R"]), np.array(entry["shoulder01.L"]),
                             np.array(entry["upperleg01.R"]), np.array(entry["upperleg01.L"]),
                             self.op_to_blender
                         )
                         landmark.location.normalize()
-                        # Now shift the location to the middle of the model
-                        landmark.location += self.model.location + Vector((0,0,1))
                     
                     landmark.keyframe_insert(data_path="location", frame=current_frame)                
             
