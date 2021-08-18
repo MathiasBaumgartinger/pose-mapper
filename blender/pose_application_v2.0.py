@@ -10,6 +10,10 @@ spec = importlib.util.spec_from_file_location("module.name", "C:/Users/Mathias/S
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
+spec2 = importlib.util.spec_from_file_location("module.name", "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/blender/libs/plain.py")
+p = importlib.util.module_from_spec(spec2)
+spec2.loader.exec_module(p)
+
 class Mode(Enum):
     GODOT = 0
     OPENPOSE = 1
@@ -18,7 +22,7 @@ MODE = Mode.OPENPOSE
 NUM_ITERATIONS = 10
 data_path = "pose.json"
 
-prefix = "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/output/" if MODE == Mode.OPENPOSE else "C:/Users/Mathias/Documents/tester/"
+prefix = "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/preprocess/output/" if MODE == Mode.OPENPOSE else "C:/Users/Mathias/Documents/tester/"
 with open(prefix+data_path, "rt") as file:
     data_dict = json.loads(file.read())
 
@@ -28,7 +32,7 @@ connections = {
     "upperleg01.L": "lowerleg01.L",
     
     "lowerleg01.R": "foot.R",
-    "upperleg01.L": "foot.L",
+    "lowerleg01.L": "foot.L",
 
 	"shoulder01.R": "lowerarm01.R",
 	"shoulder01.L": "lowerarm01.L",
@@ -41,3 +45,6 @@ data = data_dict["poses"]
 
 model1 = m.Model(connections, bpy.data.objects["Standard"], bpy.data.armatures["Standard"])
 model1.apply_animation(data, MODE.value)
+
+#plain = p.Plain(connections)
+#plain.apply_animation(data, MODE.value)
