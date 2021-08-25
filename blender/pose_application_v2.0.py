@@ -20,16 +20,17 @@ class Mode(Enum):
 
 MODE = Mode.OPENPOSE
 NUM_ITERATIONS = 10
-data_path = "pose.json"
-
-prefix = "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/preprocess/output/" if MODE == Mode.OPENPOSE else "C:/Users/Mathias/Documents/tester/"
-with open(prefix+data_path, "rt") as file:
-    data_dict = json.loads(file.read())
+data_paths = ["image.jpg.json"]#"walking.json", "sit_down.json"]# ,
+data_dicts = []
+for path in data_paths:
+    prefix = "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/preprocess/output/" if MODE == Mode.OPENPOSE else "C:/Users/Mathias/Documents/tester/"
+    with open(prefix+path, "rt") as file:
+        data_dicts.append(json.loads(file.read()))
 
 
 connections = {	
-    "upperleg01.R": "lowerleg01.R", 
-    "upperleg01.L": "lowerleg01.L",
+    "upperleg02.R": "lowerleg01.R", 
+    "upperleg02.L": "lowerleg01.L",
     
     "lowerleg01.R": "foot.R",
     "lowerleg01.L": "foot.L",
@@ -41,10 +42,11 @@ connections = {
 	"lowerarm01.R": "wrist.R"
 }
 
-data = data_dict["poses"]
-
 model1 = m.Model(connections, bpy.data.objects["Standard"], bpy.data.armatures["Standard"])
-model1.apply_animation(data, MODE.value)
+for data_dict in data_dicts: 
+    data = data_dict["poses"]
 
-#plain = p.Plain(connections)
-#plain.apply_animation(data, MODE.value)
+    model1.apply_animation(data, MODE.value)
+
+    #plain = p.Plain(connections)
+    #plain.apply_animation(data, MODE.value)
