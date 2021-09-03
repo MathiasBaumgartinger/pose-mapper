@@ -84,7 +84,7 @@ class Plain:
                     if MODE == self.Mode.GODOT.value:
                         landmark.location = util.gd_to_blender(pos) - self.get_adjustment_vector(
                             np.array(entry["shoulder01.R"]), np.array(entry["shoulder01.L"]),
-                            np.array(entry["upperleg01.R"]), np.array(entry["upperleg01.L"]),
+                            np.array(entry["upperleg02.R"]), np.array(entry["upperleg02.L"]),
                             util.gd_to_blender
                         )              
                     elif MODE == self.Mode.OPENPOSE.value:
@@ -92,7 +92,7 @@ class Plain:
                         # to the origin
                         adjustment_vec = self.get_adjustment_vector(
                             np.array(entry["shoulder01.R"]), np.array(entry["shoulder01.L"]),
-                            np.array(entry["upperleg01.R"]), np.array(entry["upperleg01.L"]),
+                            np.array(entry["upperleg02.R"]), np.array(entry["upperleg02.L"]),
                             util.mp_to_blender
                         )
                         self.landmark_parent.location = self.find_translation(

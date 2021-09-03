@@ -20,7 +20,7 @@ class Mode(Enum):
 
 MODE = Mode.OPENPOSE
 NUM_ITERATIONS = 10
-data_paths = ["image.jpg.json"]#"walking.json", "sit_down.json"]# ,
+data_paths = ["walking.json", "sit_down.json"]# ,
 data_dicts = []
 for path in data_paths:
     prefix = "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/preprocess/output/" if MODE == Mode.OPENPOSE else "C:/Users/Mathias/Documents/tester/"

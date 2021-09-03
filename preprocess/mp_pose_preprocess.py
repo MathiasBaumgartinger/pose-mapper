@@ -23,9 +23,9 @@ class poseDetector():
         18: "RightPinky",  20: "RightIndex",  22: "RightThumb",
 
         # Left foot
-        23: "upperleg01.L", 25: "lowerleg01.L", 27: "foot.L", 29: "LeftHeel", 31: "LeftFootIndex",
+        23: "upperleg02.L", 25: "lowerleg01.L", 27: "foot.L", 29: "LeftHeel", 31: "LeftFootIndex",
         # Right foot
-        24: "upperleg01.R", 26: "lowerleg01.R", 28: "foot.R", 30: "RightHeel", 32: "RightFootIndex" 
+        24: "upperleg02.R", 26: "lowerleg01.R", 28: "foot.R", 30: "RightHeel", 32: "RightFootIndex" 
     }
 
 
@@ -64,32 +64,36 @@ class poseDetector():
         self.style_neutral.circle_radius = 0
         self.connections_left = set(filter(lambda x: x[0] % 2 == 1 and x[1] % 2 == 1, self.mpPose.POSE_CONNECTIONS))
 
-
-    def findPose(self, img, draw=True):
+    def process(self, img):
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.results = self.pose.process(imgRGB)
-        if self.results.pose_landmarks:
-            if draw:
-                self.mpDraw.draw_landmarks(img, self.results.pose_landmarks,
-                                           self.connections_right, self.style_right, self.style_right)
-                self.mpDraw.draw_landmarks(img, self.results.pose_landmarks,
-                                           self.connections_left, self.style_left, self.style_left)
-                self.mpDraw.draw_landmarks(img, self.results.pose_landmarks,
-                                           self.connections_neutral, self.style_neutral, self.style_neutral)
-                
         return img
 
 
-    def findPosition(self, img, draw=True):
+    def draw(self, img):
+        if self.results.pose_landmarks:
+            self.mpDraw.draw_landmarks(img, self.results.pose_landmarks,
+                                        self.connections_right, self.style_right, self.style_right)
+            self.mpDraw.draw_landmarks(img, self.results.pose_landmarks,
+                                        self.connections_left, self.style_left, self.style_left)
+            self.mpDraw.draw_landmarks(img, self.results.pose_landmarks,
+                                        self.connections_neutral, self.style_neutral, self.style_neutral)
+            
+            for landmark in self.screenSpaceLmList: 
+                cv2.circle(img, (landmark[0], landmark[1]), 5, (255, 0, 0), cv2.FILLED)
+        return img
+
+
+    def findPose(self, img):
         self.lmDict = dict()
+        self.screenSpaceLmList = list()
         if self.results.pose_landmarks:
             for id, lm in enumerate(self.results.pose_landmarks.landmark):
                 h, w, c = img.shape
-                # print(id, lm)
                 cx, cy = int(lm.x * w), int(lm.y * h)
+                self.screenSpaceLmList.append((cx, cy))
                 self.lmDict[self.BODY_PARTS[id]] = [lm.x, lm.y, lm.z]
-                if draw:
-                    cv2.circle(img, (cx, cy), 5, (255, 0, 0), cv2.FILLED)
+
         return self.lmDict
 
 
@@ -132,9 +136,10 @@ while True:
     if not success:
         cap.release()
         break
-
-    img = detector.findPose(img)
-    lmDict = detector.findPosition(img, draw=False)
+    
+    img = detector.process(img)
+    lmDict = detector.findPose(img)
+    img = detector.draw(img)
     if len(lmDict) !=0:
         poses.append(lmDict)
 
