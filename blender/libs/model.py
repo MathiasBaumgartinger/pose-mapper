@@ -74,21 +74,21 @@ class Model:
 
         self.set_mode(self.BlenderMode.OBJECT)
 
-        bpy.ops.object.empty_add()
-        self.base = bpy.context.object
-        self.base.name = "Base"
-        self.model.parent = self.base
-
-        bpy.ops.object.empty_add()
-        self.landmark_rotation = bpy.context.object
-        self.landmark_rotation.name = "LandmarkRotation"
-        self.landmark_rotation.parent = self.base
+        #bpy.ops.object.empty_add()
+        #self.base = bpy.context.object
+        #self.base.name = "Base"
+        #self.model.parent = self.base
+#
+        #bpy.ops.object.empty_add()
+        #self.landmark_rotation = bpy.context.object
+        #self.landmark_rotation.name = "LandmarkRotation"
+        #self.landmark_rotation.parent = self.base
 
         bpy.ops.object.empty_add()
         self.landmark_parent = bpy.context.object
         self.landmark_parent.name = "Landmarks"
         self.landmark_parent.scale = Vector((10, 10, 10))
-        self.landmark_parent.parent = self.landmark_rotation
+        #self.landmark_parent.parent = self.landmark_rotation
 
         self.set_connections(config["landmarked"], True)
         self.set_connections(config["rest"], False)
@@ -144,7 +144,8 @@ class Model:
     def reset(self):
         self.current_frame = 0
 
-    def test(self, data: dict, MODE: int):
+
+    def apply_animation(self, data: dict, MODE: int) -> None:
         convert_func: Function
         if MODE == self.Mode.GODOT.value:
             convert_func = util.gd_to_blender         
@@ -171,9 +172,9 @@ class Model:
 
             self.model.location = current_location
             self.model.keyframe_insert(data_path="location", frame=self.current_frame)
-
-            self.landmark_parent.location = current_location
-            self.landmark_parent.keyframe_insert(data_path="location", frame=self.current_frame)
+            self.set_mode(self.BlenderMode.OBJECT)
+            self.set_mode(self.BlenderMode.POSE)
+            self.set_mode(self.BlenderMode.OBJECT)
 
             for bone_id, pos in entry.items():
                 if bone_id in self.joints:
@@ -190,10 +191,10 @@ class Model:
                             bone_head_targeted_by = self.model.matrix_world @ self.joints[targeted_by_id].bone.head
                             bone_head_current = self.model.matrix_world @ self.joints[bone_id].bone.head
 
-                            direction = convert_func(pos)
-                            #direction.normalize()
+                            direction = convert_func(np.array(pos) - np.array(entry[targeted_by_id]))
+                            direction.normalize()
 
-                            landmark.location = bone_head_targeted_by + direction #* (bone_head_targeted_by - bone_head_current).length * 4
+                            landmark.location = bone_head_targeted_by + direction * (bone_head_targeted_by - bone_head_current).length
                             landmark.location /= self.landmark_parent.scale[0]
                         else:
                             landmark.location = self.model.matrix_world @ self.joints[bone_id].bone.head
@@ -202,78 +203,3 @@ class Model:
                         landmark.keyframe_insert(data_path="location", frame=self.current_frame)
 
             self.current_frame += 1
-
-
-    def apply_animation(self, data: dict, MODE: int) -> None:
-        # As the coordinate systems have different orders/signs of coordinates we need
-        # to convert the data from our source
-        convert_func: Function
-        if MODE == self.Mode.GODOT.value:
-            convert_func = util.gd_to_blender         
-        elif MODE == self.Mode.OPENPOSE.value:
-            convert_func = util.mp_to_blender
-
-        for entry in data:
-            shoulderR, shoulderL = np.array(entry["shoulder01.R"]), np.array(entry["shoulder01.L"])
-            upperlegR, upperlegL = np.array(entry["upperleg01.R"]), np.array(entry["upperleg01.L"])
-
-            base = (self.find_base(
-                shoulderR, shoulderL, upperlegR, upperlegL, convert_func
-            ))
-            self.base.location = self.find_translation(
-                shoulderR, shoulderL, convert_func
-            )
-            body_center = self.get_body_center(
-                shoulderR, shoulderL, upperlegR, upperlegL, convert_func
-            )
-            #body_center = self.model.matrix_world @ bpy.data.objects["Standard"].pose.bones["spine03"].tail
-
-            base.resize_4x4()
-            euler_angles: Euler = base.to_euler()
-            euler_angles.x = 0
-            self.model.rotation_euler = euler_angles
-            # Only to adjust to the rotation of y-axis, otherwise the coordinates should stay true
-            self.landmark_rotation.rotation_euler = euler_angles
-            #self.landmark_rotation.rotation_euler.y = euler_angles.y
-            #self.landmark_rotation.rotation_euler.x = euler_angles.x
-
-            self.landmark_rotation.keyframe_insert(data_path="rotation_euler", frame=self.current_frame)
-            self.model.keyframe_insert(data_path="rotation_euler", frame=self.current_frame)
-            self.base.keyframe_insert(data_path="location", frame=self.current_frame)
-
-            self.set_mode(self.BlenderMode.POSE)
-            self.landmark_parent.matrix_world.translation = self.model.matrix_world @ bpy.data.objects["Standard"].pose.bones["spine03"].tail
-            self.landmark_parent.keyframe_insert(data_path="location", frame=self.current_frame)
-            
-            for bone_id, pos in entry.items():
-                if bone_id in self.joints:
-                    if self.joints[bone_id].has_landmark:
-                        landmark: Object = self.joints[bone_id].landmark
-
-                        # Find location by the position (different system in blender) minus an adjustment
-                        # to the origin
-                        keys_as_list = list(self.connections["landmarked"].keys())
-                        vals_as_list = list(self.connections["landmarked"].values())
-                        targeted_by_id = keys_as_list[vals_as_list.index(bone_id)] if bone_id in vals_as_list else None
-                        
-                        if targeted_by_id:
-                            # Find location by the position (different system in blender) minus an adjustment
-                            # to the origin
-                            landmark.location = convert_func(pos) - body_center
-                            landmark.location.normalize()
-                            landmark.location *= (self.joints[bone_id].bone.head - self.armature.bones["spine03"].matrix_local.translation).length
-                            #landmark.location *= (self.joints[bone_id].bone.head - self.model.matrix_world @ self.model.pose.bones["spine03"].bone.head).length
-                            landmark.location /= self.landmark_parent.scale[0]
-        
-                            landmark.keyframe_insert(data_path="location", frame=self.current_frame)
-                        else:
-                            landmark.location = self.model.matrix_world @ self.joints[bone_id].bone.head
-                            landmark.location /= self.landmark_parent.scale[0]
-
-                        landmark.keyframe_insert(data_path="location", frame=self.current_frame)
-
-            self.current_frame += 1
-
-        #self.last_position = self.base.matrix_world.translation
-        #self.last_position.z = 0
-
