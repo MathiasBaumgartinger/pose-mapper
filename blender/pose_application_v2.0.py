@@ -28,25 +28,43 @@ for path in data_paths:
         data_dicts.append(json.loads(file.read()))
 
 
-connections = {	
-    "upperleg02.R": "lowerleg01.R", 
-    "upperleg02.L": "lowerleg01.L",
-    
-    "lowerleg01.R": "foot.R",
-    "lowerleg01.L": "foot.L",
+connections = {
+    "landmarked": {
+        "lowerarm01.L":	"wrist.L",
+	    "lowerarm01.R": "wrist.R",
 
-	"shoulder01.R": "lowerarm01.R",
-	"shoulder01.L": "lowerarm01.L",
-	
-	"lowerarm01.L":	"wrist.L",
-	"lowerarm01.R": "wrist.R"
+        "shoulder01.R": "lowerarm01.R",
+        "shoulder01.L": "lowerarm01.L",
+        
+        "lowerleg01.R": "foot.R",
+        "lowerleg01.L": "foot.L",
+
+        "upperleg01.R": "lowerleg01.R", 
+        "upperleg01.L": "lowerleg01.L", 
+    },
+
+    "rest": {
+        "upperleg02.R": "lowerleg01.R",
+        "upperleg02.L": "lowerleg01.L",
+
+        "lowerleg02.R": "foot.R",
+        "lowerleg02.L": "foot.L",
+
+        "upperarm02.R": "lowerarm01.R",
+        "upperarm01.R": "lowerarm01.R",
+        "upperarm02.L": "lowerarm01.L",
+        "upperarm01.L": "lowerarm01.L",
+
+        "lowerarm02.L":	"wrist.L",
+	    "lowerarm02.R": "wrist.R",
+    }
 }
 
 model1 = m.Model(connections, bpy.data.objects["Standard"], bpy.data.armatures["Standard"])
 for data_dict in data_dicts: 
     data = data_dict["poses"]
 
-    model1.apply_animation(data, MODE.value)
+    model1.test(data, MODE.value)
 
     #plain = p.Plain(connections)
     #plain.apply_animation(data, MODE.value)

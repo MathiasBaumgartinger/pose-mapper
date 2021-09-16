@@ -23,9 +23,9 @@ class poseDetector():
         18: "RightPinky",  20: "RightIndex",  22: "RightThumb",
 
         # Left foot
-        23: "upperleg02.L", 25: "lowerleg01.L", 27: "foot.L", 29: "LeftHeel", 31: "LeftFootIndex",
+        23: "upperleg01.L", 25: "lowerleg01.L", 27: "foot.L", 29: "LeftHeel", 31: "LeftFootIndex",
         # Right foot
-        24: "upperleg02.R", 26: "lowerleg01.R", 28: "foot.R", 30: "RightHeel", 32: "RightFootIndex" 
+        24: "upperleg01.R", 26: "lowerleg01.R", 28: "foot.R", 30: "RightHeel", 32: "RightFootIndex" 
     }
 
 
@@ -124,7 +124,6 @@ class poseDetector():
         return angle
 
 name = sys.argv[1]
-#name = "flex"
 cap = cv2.VideoCapture("C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/videos/%s.mp4" % name)
 pTime = 0
 detector = poseDetector()
