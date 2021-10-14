@@ -32,7 +32,7 @@ A high contrast makes finding movement for the predictor a lot easier
 
 ### Step 2: Preprocessing 
 
-Preprocessing in the case of this repository describes the process of creating a JSON with positions of landmarks (as described in (here)[https://google.github.io/mediapipe/images/mobile/pose_tracking_full_body_landmarks.png]) frame by frame. The preprocessing used here is based on the ![MediaPipe Pose-Detection](https://google.github.io/mediapipe/solutions/pose.html).
+Preprocessing in the case of this repository describes the process of creating a JSON with positions of landmarks (as described in under https://google.github.io/mediapipe/images/mobile/pose_tracking_full_body_landmarks.png) frame by frame. The preprocessing used here is based on the ![MediaPipe Pose-Detection](https://google.github.io/mediapipe/solutions/pose.html).
 
 Usage: ``python ./preprocess/mp_pose_preprocess.py <path_to_video> <destination_file>``
 
@@ -40,14 +40,19 @@ Usage: ``python ./preprocess/mp_pose_preprocess.py <path_to_video> <destination_
 
 Exporting the desired model from Makehuman as ``.mhx2`` file and loading the model into blender using the MHX2 plugin described in the prerequisites (http://www.makehumancommunity.org/content/plugins.html). A generic model from Makehuman is inside the directory ``models/standard.mhx2``. The application can be applied on any model of the ``.mhx2`` standard, just make sure to assign the name of the model inside of blender to ``MODEL_NAME``.
 
+![grafik](https://user-images.githubusercontent.com/33001106/137334688-2b1b56a9-3813-4e55-9017-d9cdc8de9cf1.png)
 
 ### Step 4a: Application on the model
 
 With a correct setup, from here one just needs to open the ``pose-application.py`` in blender, tune the constants accordingly (more information under Configuration) and run the script. The results can be best obtained in the "Animation" tab of Blender. 
 
+![grafik](https://user-images.githubusercontent.com/33001106/137335645-2412117a-7040-40dd-9c28-2ef96e4c82a1.png)
+
 ### Step 4b: Visualizing with "plain.py"
 
 Another visualization of the data is provided by means of the plain-object. With it only the landmarks are being depicted according to the pose-estimator inside of blender without a matching model. Step 4a and 3 are not necessary for this visualization. I recommend not to use a plain and a model inside the same blender execution as it causes bugs.
+
+![grafik](https://user-images.githubusercontent.com/33001106/137335698-68919a7e-3b89-4bc3-92a6-80e768124afd.png)
 
 ## Configuration
 
@@ -75,21 +80,21 @@ Another visualization of the data is provided by means of the plain-object. With
 
 ## Limitations
 
-- Jittering
+- Jittering:
 As of now the mapping is very jittery. Increasing ``AVG_OVER_N_FRAMES`` makes this better, leads to other bugs in some cases however.
-- No "real-life" body constraints
+- No "real-life" body constraints:
 Sometimes body-parts are overlapping/pointing in directions which are actually not possible
-- Only one person
+- Only one person:
 As mentioned before only one person can be tracked
-- Camera perspectives
+- Camera perspectives:
 Camera perspectives might distort the way the pose-estimator estimates the coordinates
-- Camera movement
+- Camera movement:
 Camera movement appears as model movement in the end, the model would need to be focussed in the middle
-- Translation calculated hard-coded
+- Translation calculated hard-coded:
 The translation is as of now hardcoded with ``DISTANCE_FACTOR``
-- Cuts have to be marked manually
+- Cuts have to be marked manually:
 If the video has a cutscene, the scene must be manually cut and then individually preprocessed
-- Only arms and legs
+- Only arms and legs:
 Only arms and legs are being tracked at the moment. It would be further possible to track fingers/head/etc..
 
 ## Credits
