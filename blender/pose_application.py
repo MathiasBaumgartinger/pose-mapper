@@ -1,17 +1,17 @@
 import bpy
 import json
-from mathutils import Vector
 import importlib.util
 
 PATH_PREFIX = "C:/Users/Mathias/Sync/Master/sem2/P1/implementations/pose-estimation/"
-DISTANCE_FACTOR = 20
 MODEL_NAME = "Standard"
 DATA_PATHS = [
             PATH_PREFIX + "preprocess/output/walking.json",
             PATH_PREFIX + "preprocess/output/sit_down_fixed.json", 
             PATH_PREFIX + "preprocess/output/pose.json",
             ]
-FRAMES_BETWEEN = [20, 5]
+DISTANCE_FACTOR = 20
+AVG_OVER_N_FRAMES = 3
+FRAMES_BETWEEN = [5, 5]
 CONNECTIONS = {
     "landmarked": {
         "lowerarm01.L":	"wrist.L",
@@ -64,13 +64,14 @@ for path in DATA_PATHS:
 
 model1 = m.Model(CONNECTIONS, bpy.data.objects[MODEL_NAME], bpy.data.armatures[MODEL_NAME], DISTANCE_FACTOR)
 model1.reset()
+#plain = p.Plain(CONNECTIONS)
 for (i, data_dict) in enumerate(data_dicts): 
     data = data_dict["poses"]
 
-    model1.apply_animation(data, util.mp_to_blender, 10)
+    model1.apply_animation(data, util.mp_to_blender, AVG_OVER_N_FRAMES)
     
     if not len(FRAMES_BETWEEN) - 1 < i:
         model1.current_frame += FRAMES_BETWEEN[i]
 
-    #plain = p.Plain(connections)
-    #plain.apply_animation(data, MODE.value)
+    #plain.apply_animation(data, util.mp_to_blender)
+    
