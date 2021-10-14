@@ -12,7 +12,6 @@ spec.loader.exec_module(util)
 
 
 class Joint:
-    #transform: np.array
     landmark: Object
     constraint: Constraint
     name: str
